@@ -17,13 +17,13 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div className="rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[#73766F]">
             {title}
           </p>
 
-          <p className="mt-3 break-words text-2xl font-semibold tracking-tight text-[#242624] sm:text-3xl">
+          <p className="mt-3 whitespace-nowrap text-2xl font-semibold tracking-tight text-[#242624] sm:text-3xl">
             {value}
           </p>
         </div>

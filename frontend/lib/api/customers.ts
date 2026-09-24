@@ -98,3 +98,42 @@ export async function getCustomer(
 
   return response.json();
 }
+
+export interface CustomerSale {
+  id: string;
+  invoice_number: string;
+  total: number;
+  status: "completed" | "cancelled";
+  created_at: string;
+  paid_amount: number;
+  balance: number;
+}
+
+export async function getCustomerSales(
+  id: string,
+): Promise<CustomerSale[]> {
+  const token = await getAccessToken();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    throw new Error("API URL is not configured.");
+  }
+
+  const response = await fetch(
+    `${apiUrl}/api/customers/${encodeURIComponent(id)}/sales`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to load customer sales.",
+    );
+  }
+
+  return response.json();
+}

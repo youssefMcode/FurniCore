@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* KPIs */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-6">
         <StatCard
           title="Today's Sales"
           value={formatMoney(summary.today_sales)}

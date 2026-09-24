@@ -190,3 +190,50 @@ def update_customer(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to update customer.",
         )
+
+@router.get("/{customer_id}/sales")
+def get_customer_sales(
+    customer_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        get_customer_or_404(customer_id)
+
+        response = (
+            supabase.table("sales")
+            .select(
+                "id, invoice_number, total, status, created_at, "
+                "payments(amount)"
+            )
+            .eq("customer_id", customer_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+        sales = response.data or []
+
+        for sale in sales:
+            paid = sum(
+                float(payment.get("amount") or 0)
+                for payment in sale.get("payments") or []
+            )
+
+            total = float(sale["total"])
+            sale["paid_amount"] = round(paid, 2)
+            sale["balance"] = round(
+                max(total - paid, 0),
+                2,
+            )
+
+        return sales
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        print(f"Customer sales error: {exc}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load customer sales.",
+        )

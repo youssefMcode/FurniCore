@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getCustomer } from "@/lib/api/customers";
+import {
+  getCustomer,
+  getCustomerSales,
+} from "@/lib/api/customers";
 
 export const dynamic = "force-dynamic";
 
@@ -23,9 +26,17 @@ export default async function CustomerDetailsPage({
   const { id } = await params;
 
   let customer;
+  let sales;
 
   try {
-    customer = await getCustomer(id);
+    const [customerData, customerSales] =
+      await Promise.all([
+        getCustomer(id),
+        getCustomerSales(id),
+      ]);
+
+    customer = customerData;
+    sales = customerSales;
   } catch (error) {
     if (
       error instanceof Error &&
@@ -121,7 +132,8 @@ export default async function CustomerDetailsPage({
           </section>
         </div>
 
-        <section className="rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-6">
+        {/* REAL PURCHASE HISTORY */}
+        <section className="h-fit rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex size-10 items-center justify-center rounded-xl bg-[#EEF3F0] text-[#244A3D]">
             <ReceiptText className="size-4" />
           </div>
@@ -130,14 +142,61 @@ export default async function CustomerDetailsPage({
             Purchase History
           </h3>
 
-          <p className="mt-2 text-sm leading-6 text-[#73766F]">
-            No recorded sales for this customer yet.
-          </p>
+          {sales.length === 0 ? (
+            <p className="mt-3 text-sm leading-6 text-[#73766F]">
+              No recorded sales for this customer yet.
+            </p>
+          ) : (
+            <div className="mt-4 divide-y divide-[#EEECE6]">
+              {sales.map((sale) => (
+                <Link
+                  key={sale.id}
+                  href={`/sales/${sale.id}`}
+                  className="group flex items-center justify-between gap-4 py-3 first:pt-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[#242624] transition group-hover:text-[#244A3D]">
+                      {sale.invoice_number}
+                    </p>
 
-          <p className="mt-4 text-xs text-[#9A9C96]">
-            Sales linked to this customer will appear
-            here.
-          </p>
+                    <p className="mt-1 text-xs text-[#73766F]">
+                      {new Date(
+                        sale.created_at,
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-[#242624]">
+                      $
+                      {Number(
+                        sale.total,
+                      ).toFixed(2)}
+                    </p>
+
+                    {sale.status ===
+                    "cancelled" ? (
+                      <p className="mt-1 text-xs font-medium text-red-700">
+                        Cancelled
+                      </p>
+                    ) : sale.balance > 0 ? (
+                      <p className="mt-1 text-xs font-medium text-amber-700">
+                        $
+                        {Number(
+                          sale.balance,
+                        ).toFixed(2)}{" "}
+                        due
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs font-medium text-green-700">
+                        Paid
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>
