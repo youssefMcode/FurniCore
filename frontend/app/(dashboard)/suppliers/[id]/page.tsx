@@ -9,6 +9,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { getSupplier } from "@/lib/api/suppliers";
+import { getPurchases } from "@/lib/api/purchases";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,11 @@ export default async function SupplierDetailsPage({
     throw error;
   }
 
+  const purchases = await getPurchases(supplier.id);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Link
@@ -79,6 +83,7 @@ export default async function SupplierDetailsPage({
         </Button>
       </div>
 
+      {/* Supplier information */}
       <section className="rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-6">
         <h3 className="font-semibold">
           Supplier Information
@@ -104,20 +109,69 @@ export default async function SupplierDetailsPage({
           </p>
 
           <p className="mt-2 text-sm">
-            {supplier.notes ||
-              "No notes recorded."}
+            {supplier.notes || "No notes recorded."}
           </p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-dashed border-[#D7D3CA] bg-white p-6">
-        <h3 className="font-semibold">
-          Purchase History
-        </h3>
+      {/* Purchase history */}
+      <section className="rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-semibold">
+              Purchase History
+            </h3>
 
-        <p className="mt-2 text-sm text-[#73766F]">
-          Purchases from this supplier will appear here.
-        </p>
+            <p className="mt-1 text-sm text-[#73766F]">
+              Purchases recorded from this supplier.
+            </p>
+          </div>
+
+          <Button
+            nativeButton={false}
+            render={<Link href="/purchases/new" />}
+          >
+            New Purchase
+          </Button>
+        </div>
+
+        {purchases.length === 0 ? (
+          <div className="mt-6 rounded-xl border border-dashed border-[#D7D3CA] p-6 text-center">
+            <p className="text-sm text-[#73766F]">
+              No purchases recorded yet.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 divide-y divide-[#EEECE6]">
+            {purchases.map((purchase) => (
+              <Link
+                key={purchase.id}
+                href={`/purchases/${purchase.id}`}
+                className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium">
+                    {purchase.purchase_date}
+                  </p>
+
+                  <span
+                    className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      purchase.status === "completed"
+                        ? "bg-green-50 text-green-700"
+                        : "bg-red-50 text-red-700"
+                    }`}
+                  >
+                    {purchase.status}
+                  </span>
+                </div>
+
+                <p className="font-semibold">
+                  ${Number(purchase.total).toFixed(2)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
