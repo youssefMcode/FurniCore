@@ -1,3 +1,4 @@
+import { BusinessAssistant } from "@/components/ai/business-assistant";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { getCurrentUserProfile } from "@/lib/auth";
@@ -32,6 +33,11 @@ export default async function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* Admin-only AI Business Assistant */}
+      {profile.role === "admin" && (
+        <BusinessAssistant />
+      )}
     </div>
   );
 }

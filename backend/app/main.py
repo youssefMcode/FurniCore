@@ -13,6 +13,9 @@ from app.api.purchases import router as purchases_router
 from app.api.expenses import router as expenses_router
 from app.api.users import router as users_router
 from app.api.audit_logs import router as audit_logs_router
+from app.api.business_settings import router as business_settings_router
+from app.api.reports import router as reports_router
+from app.api.ai import router as ai_router
 
 
 app = FastAPI(
@@ -44,6 +47,9 @@ app.include_router(purchases_router)
 app.include_router(expenses_router)
 app.include_router(users_router)
 app.include_router(audit_logs_router)
+app.include_router(business_settings_router)
+app.include_router(reports_router)
+app.include_router(ai_router)
 
 @app.get("/")
 def root():

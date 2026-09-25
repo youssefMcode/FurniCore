@@ -5,7 +5,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import get_current_user
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 
 
 router = APIRouter(
@@ -64,6 +64,7 @@ def get_dashboard_summary(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         now = datetime.now(timezone.utc)
 
         today_start = now.replace(

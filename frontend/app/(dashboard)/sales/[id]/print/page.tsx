@@ -1,9 +1,26 @@
+import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 import { PrintInvoiceButton } from "@/components/sales/print-invoice-button";
+import { Button } from "@/components/ui/button";
+import { getBusinessSettings } from "@/lib/api/business-settings";
 import { getSale } from "@/lib/api/sales";
+import { formatCurrency } from "@/lib/format-currency";
 
 export const dynamic = "force-dynamic";
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    },
+  ).format(new Date(value));
+}
 
 export default async function PrintInvoicePage({
   params,
@@ -27,148 +44,210 @@ export default async function PrintInvoicePage({
     throw error;
   }
 
-  const totalRefunded = (sale.returns ?? []).reduce(
-    (total, saleReturn) =>
-      total + Number(saleReturn.refund_amount),
+  const settings =
+    await getBusinessSettings();
+
+  const currency = settings.currency || "USD";
+
+  const paid = (sale.payments ?? []).reduce(
+  (sum, payment) =>
+    sum + Number(payment.amount),
+  0,
+);
+
+const balance = Math.max(
+  Number(sale.total) - paid,
+  0,
+);
+
+  const refunded = (sale.returns ?? []).reduce(
+    (sum, saleReturn) =>
+      sum +
+      Number(
+        saleReturn.refund_amount ?? 0,
+      ),
     0,
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F7F3] px-4 py-6 print:bg-white print:p-0 sm:px-6">
-      <div className="mx-auto max-w-4xl">
-        {/* Print Actions */}
-        <div className="mb-5 flex justify-end print:hidden">
-          <PrintInvoiceButton />
-        </div>
+    <div className="mx-auto max-w-5xl space-y-6 print:max-w-none print:space-y-0">
+      {/* Screen controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <Button
+          nativeButton={false}
+          variant="outline"
+          render={
+            <Link
+              href={`/sales/${sale.id}`}
+            />
+          }
+        >
+          <ArrowLeft className="size-4" />
+          Sale Details
+        </Button>
 
-        {/* Invoice */}
-        <main className="rounded-2xl border border-[#E5E2DA] bg-white p-6 shadow-sm print:rounded-none print:border-0 print:p-0 print:shadow-none sm:p-10">
-          {/* Header */}
-          <header className="flex flex-col gap-6 border-b border-[#E5E2DA] pb-7 sm:flex-row sm:items-start sm:justify-between">
+        <PrintInvoiceButton />
+      </div>
+
+      {/* Printable invoice */}
+      <article className="rounded-2xl border border-[#E5E2DA] bg-white p-5 shadow-sm sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
+        {/* Business + invoice header */}
+        <header className="flex flex-col gap-6 border-b border-[#D9D5CC] pb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            {settings.logo_url && (
+              <Image
+                src={settings.logo_url}
+                alt={`${settings.business_name} logo`}
+                width={110}
+                height={85}
+                className="h-20 w-auto max-w-32 object-contain"
+                unoptimized
+              />
+            )}
+
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-[#244A3D]">
-                FurniCore
+              <h1 className="text-2xl font-bold text-[#244A3D]">
+                {settings.business_name}
               </h1>
 
-              <p className="mt-1 text-sm text-[#73766F]">
-                Furniture Showroom
-              </p>
-            </div>
+              {settings.phone && (
+                <p className="mt-2 text-sm text-[#555950]">
+                  {settings.phone}
+                </p>
+              )}
 
-            <div className="sm:text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#73766F]">
-                Invoice
-              </p>
-
-              <h2 className="mt-1 text-xl font-semibold text-[#242624]">
-                {sale.invoice_number}
-              </h2>
-
-              <p className="mt-2 text-sm text-[#73766F]">
-                {new Date(
-                  sale.created_at,
-                ).toLocaleString()}
-              </p>
-
-              <span
-                className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  sale.status === "cancelled"
-                    ? "bg-red-50 text-red-700"
-                    : "bg-green-50 text-green-700"
-                }`}
-              >
-                {sale.status.toUpperCase()}
-              </span>
-            </div>
-          </header>
-
-          {/* Customer */}
-          <section className="grid gap-6 border-b border-[#E5E2DA] py-7 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#73766F]">
-                Customer
-              </p>
-
-              <p className="mt-2 font-semibold text-[#242624]">
-                {sale.customers?.name ??
-                  "Walk-in Customer"}
-              </p>
-
-              {sale.customers && (
-                <div className="mt-1 space-y-1 text-sm text-[#73766F]">
-                  <p>{sale.customers.phone}</p>
-
-                  {sale.customers.address && (
-                    <p>
-                      {sale.customers.address}
-                    </p>
-                  )}
-                </div>
+              {settings.address && (
+                <p className="mt-1 max-w-sm text-sm text-[#555950]">
+                  {settings.address}
+                </p>
               )}
             </div>
+          </div>
 
-            <div className="sm:text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#73766F]">
-                Payment Status
-              </p>
+          <div className="sm:text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#73766F]">
+              Invoice
+            </p>
 
-              <p className="mt-2 font-semibold capitalize text-[#242624]">
-                {sale.payment_status}
-              </p>
+            <h2 className="mt-1 text-xl font-semibold">
+              {sale.invoice_number}
+            </h2>
 
+            <p className="mt-2 text-sm text-[#73766F]">
+              {formatDate(sale.created_at)}
+            </p>
+
+            <span
+              className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                sale.status === "completed"
+                  ? "bg-green-50 text-green-700"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {sale.status}
+            </span>
+          </div>
+        </header>
+
+        {/* Customer */}
+        <section className="grid gap-6 border-b border-[#E5E2DA] py-6 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#73766F]">
+              Bill To
+            </p>
+
+            <p className="mt-2 font-semibold">
+              {sale.customers?.name ??
+                "Walk-in Customer"}
+            </p>
+
+            {sale.customers?.phone && (
               <p className="mt-1 text-sm text-[#73766F]">
-                Paid: $
-                {Number(
-                  sale.paid_amount,
-                ).toFixed(2)}
+                {sale.customers.phone}
               </p>
-            </div>
-          </section>
+            )}
 
-          {/* Items */}
-          <section className="py-7">
-            <h3 className="mb-4 font-semibold text-[#242624]">
-              Items
-            </h3>
+            {sale.customers?.address && (
+              <p className="mt-1 text-sm text-[#73766F]">
+                {sale.customers.address}
+              </p>
+            )}
+          </div>
 
-            {/* Desktop */}
-            <div className="hidden overflow-hidden rounded-xl border border-[#E5E2DA] sm:block">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[#F8F7F3] text-xs uppercase text-[#73766F]">
-                  <tr>
-                    <th className="px-4 py-3">
-                      Product
-                    </th>
+          <div className="sm:text-right">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#73766F]">
+              Payment
+            </p>
 
-                    <th className="px-4 py-3 text-center">
-                      Qty
-                    </th>
+            <p className="mt-2 text-sm">
+              Paid:{" "}
+              <span className="font-semibold">
+                {formatCurrency(
+                  Number(paid),
+                  currency,
+                )}
+              </span>
+            </p>
 
-                    <th className="px-4 py-3 text-right">
-                      Unit Price
-                    </th>
+            <p className="mt-1 text-sm">
+              Balance:{" "}
+              <span className="font-semibold">
+                {formatCurrency(
+                  Number(balance),
+                  currency,
+                )}
+              </span>
+            </p>
+          </div>
+        </section>
 
-                    <th className="px-4 py-3 text-right">
-                      Discount
-                    </th>
+        {/* Items */}
+        <section className="py-6">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#D9D5CC] text-xs uppercase text-[#73766F]">
+                  <th className="pb-3 pr-4">
+                    Product
+                  </th>
 
-                    <th className="px-4 py-3 text-right">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
+                  <th className="pb-3 pr-4 text-center">
+                    Qty
+                  </th>
 
-                <tbody className="divide-y divide-[#EEECE6]">
-                  {sale.sale_items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-4">
+                  <th className="pb-3 pr-4 text-right">
+                    Unit Price
+                  </th>
+
+                  <th className="pb-3 pr-4 text-right">
+                    Discount
+                  </th>
+
+                  <th className="pb-3 text-right">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {sale.sale_items.map(
+                  (item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-[#EEECE6] align-top"
+                    >
+                      <td className="py-4 pr-4">
                         <p className="font-medium">
-                          {item.products.name}
+                          {item.products?.name ??
+                            "Product"}
                         </p>
 
-                        <p className="mt-1 text-xs text-[#73766F]">
-                          {item.products.sku}
-                        </p>
+                        {item.products?.sku && (
+                          <p className="mt-1 text-xs text-[#73766F]">
+                            SKU:{" "}
+                            {item.products.sku}
+                          </p>
+                        )}
 
                         {item.customization &&
                           Object.keys(
@@ -177,263 +256,174 @@ export default async function PrintInvoicePage({
                             <div className="mt-2 text-xs text-[#73766F]">
                               {Object.entries(
                                 item.customization,
-                              ).map(
-                                ([key, value]) =>
-                                  value !== null &&
-                                  value !==
-                                    undefined &&
-                                  value !== "" ? (
+                              )
+                                .filter(
+                                  ([key]) =>
+                                    key !==
+                                    "extra_price",
+                                )
+                                .map(
+                                  ([
+                                    key,
+                                    value,
+                                  ]) => (
                                     <p key={key}>
-                                      <span className="capitalize">
-                                        {key.replace(
-                                          /_/g,
+                                      {key
+                                        .replaceAll(
+                                          "_",
                                           " ",
+                                        )
+                                        .replace(
+                                          /\b\w/g,
+                                          (
+                                            char,
+                                          ) =>
+                                            char.toUpperCase(),
                                         )}
-                                      </span>
                                       :{" "}
-                                      {String(value)}
+                                      {String(
+                                        value,
+                                      )}
                                     </p>
-                                  ) : null,
-                              )}
+                                  ),
+                                )}
                             </div>
                           )}
                       </td>
 
-                      <td className="px-4 py-4 text-center">
+                      <td className="py-4 pr-4 text-center">
                         {item.quantity}
                       </td>
 
-                      <td className="px-4 py-4 text-right">
-                        $
-                        {Number(
-                          item.unit_price,
-                        ).toFixed(2)}
+                      <td className="py-4 pr-4 text-right">
+                        {formatCurrency(
+                          Number(
+                            item.unit_price,
+                          ),
+                          currency,
+                        )}
                       </td>
 
-                      <td className="px-4 py-4 text-right">
-                        $
-                        {Number(
-                          item.discount,
-                        ).toFixed(2)}
+                      <td className="py-4 pr-4 text-right">
+                        {formatCurrency(
+                          Number(
+                            item.discount,
+                          ),
+                          currency,
+                        )}
                       </td>
 
-                      <td className="px-4 py-4 text-right font-semibold">
-                        $
-                        {Number(
-                          item.line_total,
-                        ).toFixed(2)}
+                      <td className="py-4 text-right font-medium">
+                        {formatCurrency(
+                          Number(
+                            item.line_total,
+                          ),
+                          currency,
+                        )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile */}
-            <div className="space-y-3 sm:hidden">
-              {sale.sale_items.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-[#E5E2DA] p-4"
-                >
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      <p className="font-medium">
-                        {item.products.name}
-                      </p>
-
-                      <p className="mt-1 text-xs text-[#73766F]">
-                        {item.products.sku}
-                      </p>
-                    </div>
-
-                    <p className="font-semibold">
-                      $
-                      {Number(
-                        item.line_total,
-                      ).toFixed(2)}
-                    </p>
-                  </div>
-
-                  <p className="mt-3 text-xs text-[#73766F]">
-                    {item.quantity} × $
-                    {Number(
-                      item.unit_price,
-                    ).toFixed(2)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Totals */}
-          <section className="flex justify-end border-t border-[#E5E2DA] pt-6">
-            <div className="w-full space-y-3 text-sm sm:max-w-xs">
-              <InvoiceRow
-                label="Subtotal"
-                value={sale.subtotal}
-              />
-
-              <InvoiceRow
-                label="Discount"
-                value={-Number(sale.discount)}
-              />
-
-              <div className="border-t border-[#E5E2DA] pt-3">
-                <InvoiceRow
-                  label="Total"
-                  value={sale.total}
-                  strong
-                />
-              </div>
-
-              <InvoiceRow
-                label="Paid"
-                value={sale.paid_amount}
-              />
-
-              {totalRefunded > 0 && (
-                <InvoiceRow
-                  label="Refunded"
-                  value={-totalRefunded}
-                />
-              )}
-
-              <div className="border-t border-[#E5E2DA] pt-3">
-                <InvoiceRow
-                  label="Balance"
-                  value={sale.balance}
-                  strong
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Payments */}
-          {sale.payments.length > 0 && (
-            <section className="mt-8 border-t border-[#E5E2DA] pt-6">
-              <h3 className="font-semibold">
-                Payment History
-              </h3>
-
-              <div className="mt-3 space-y-2">
-                {sale.payments.map(
-                  (payment) => (
-                    <div
-                      key={payment.id}
-                      className="flex justify-between gap-4 text-sm"
-                    >
-                      <div>
-                        <span className="capitalize">
-                          {payment.payment_method.replace(
-                            /_/g,
-                            " ",
-                          )}
-                        </span>
-
-                        <span className="ml-2 text-xs text-[#73766F]">
-                          {new Date(
-                            payment.paid_at,
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      <span className="font-medium">
-                        $
-                        {Number(
-                          payment.amount,
-                        ).toFixed(2)}
-                      </span>
-                    </div>
                   ),
                 )}
-              </div>
-            </section>
-          )}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-          {/* Returns */}
-          {sale.returns?.length > 0 && (
-            <section className="mt-8 border-t border-[#E5E2DA] pt-6">
-              <h3 className="font-semibold">
-                Returns & Refunds
-              </h3>
+        {/* Totals */}
+        <section className="flex justify-end border-t border-[#E5E2DA] pt-5">
+          <div className="w-full max-w-sm space-y-3">
+            <div className="flex justify-between gap-6 text-sm">
+              <span className="text-[#73766F]">
+                Subtotal
+              </span>
 
-              <div className="mt-3 space-y-3">
-                {sale.returns.map(
-                  (saleReturn) => (
-                    <div
-                      key={saleReturn.id}
-                      className="flex justify-between gap-4 text-sm"
-                    >
-                      <div>
-                        <p>
-                          Return ·{" "}
-                          {new Date(
-                            saleReturn.created_at,
-                          ).toLocaleDateString()}
-                        </p>
-
-                        {saleReturn.reason && (
-                          <p className="mt-1 text-xs text-[#73766F]">
-                            {saleReturn.reason}
-                          </p>
-                        )}
-                      </div>
-
-                      <span className="font-medium text-red-700">
-                        -$
-                        {Number(
-                          saleReturn.refund_amount,
-                        ).toFixed(2)}
-                      </span>
-                    </div>
-                  ),
+              <span>
+                {formatCurrency(
+                  Number(sale.subtotal),
+                  currency,
                 )}
+              </span>
+            </div>
+
+            <div className="flex justify-between gap-6 text-sm">
+              <span className="text-[#73766F]">
+                Discount
+              </span>
+
+              <span>
+                -
+                {formatCurrency(
+                  Number(sale.discount),
+                  currency,
+                )}
+              </span>
+            </div>
+
+            {refunded > 0 && (
+              <div className="flex justify-between gap-6 text-sm text-red-700">
+                <span>Refunded</span>
+
+                <span>
+                  -
+                  {formatCurrency(
+                    refunded,
+                    currency,
+                  )}
+                </span>
               </div>
-            </section>
-          )}
+            )}
 
-          {/* Footer */}
-          <footer className="mt-10 border-t border-[#E5E2DA] pt-6 text-center">
-            <p className="text-sm font-medium text-[#244A3D]">
-              Thank you for your business.
-            </p>
+            <div className="flex justify-between gap-6 border-t border-[#D9D5CC] pt-3 text-lg font-semibold">
+              <span>Total</span>
 
-            <p className="mt-1 text-xs text-[#73766F]">
-              Generated by FurniCore
-            </p>
-          </footer>
-        </main>
-      </div>
-    </div>
-  );
-}
+              <span>
+                {formatCurrency(
+                  Number(sale.total),
+                  currency,
+                )}
+              </span>
+            </div>
 
-function InvoiceRow({
-  label,
-  value,
-  strong = false,
-}: {
-  label: string;
-  value: number;
-  strong?: boolean;
-}) {
-  return (
-    <div className="flex justify-between gap-5">
-      <span className="text-[#73766F]">
-        {label}
-      </span>
+            <div className="flex justify-between gap-6 text-sm">
+              <span className="text-[#73766F]">
+                Paid
+              </span>
 
-      <span
-        className={
-          strong
-            ? "text-lg font-semibold text-[#244A3D]"
-            : "font-medium"
-        }
-      >
-        {value < 0 ? "-" : ""}$
-        {Math.abs(Number(value)).toFixed(2)}
-      </span>
+              <span>
+                {formatCurrency(
+                  Number(paid),
+                  currency,
+                )}
+              </span>
+            </div>
+
+            <div className="flex justify-between gap-6 text-sm font-semibold">
+              <span>Balance</span>
+
+              <span>
+                {formatCurrency(
+                  Number(balance),
+                  currency,
+                )}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="mt-10 border-t border-[#E5E2DA] pt-5 text-center">
+          <p className="font-medium text-[#244A3D]">
+            Thank you for your business.
+          </p>
+
+          <p className="mt-1 text-xs text-[#73766F]">
+            {settings.business_name}
+            {settings.phone
+              ? ` • ${settings.phone}`
+              : ""}
+          </p>
+        </footer>
+      </article>
     </div>
   );
 }

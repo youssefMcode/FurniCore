@@ -14,6 +14,7 @@ import { ProductImagesManager } from "@/components/products/product-images-manag
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { generateProductDescription } from "@/lib/api/ai";
 import {
   authenticatedFetch,
   getApiError,
@@ -79,6 +80,11 @@ export function ProductForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [generatingDescription, setGeneratingDescription] =
+  useState(false);
+
+const [aiError, setAiError] = useState("");
+
   async function uploadPendingImages(productId: string) {
     for (const file of pendingImages) {
       const formData = new FormData();
@@ -98,6 +104,53 @@ export function ProductForm({
       }
     }
   }
+
+  async function handleGenerateDescription() {
+  setAiError("");
+
+  if (!name.trim()) {
+    setAiError(
+      "Enter a product name before generating a description.",
+    );
+    return;
+  }
+
+  if (!categoryId) {
+    setAiError(
+      "Select a category before generating a description.",
+    );
+    return;
+  }
+
+  const category = categories.find(
+    (item) => item.id === categoryId,
+  );
+
+  if (!category) {
+    setAiError("Selected category could not be found.");
+    return;
+  }
+
+  setGeneratingDescription(true);
+
+  try {
+    const generated = await generateProductDescription({
+      name: name.trim(),
+      category: category.name,
+      is_customizable: customizable,
+    });
+
+    setDescription(generated);
+  } catch (err) {
+    setAiError(
+      err instanceof Error
+        ? err.message
+        : "Unable to generate a description.",
+    );
+  } finally {
+    setGeneratingDescription(false);
+  }
+}
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -269,24 +322,55 @@ export function ProductForm({
 
           <div />
 
-          <div className="sm:col-span-2">
-            <Field label="Description">
-              <Textarea
-                value={description}
-                onChange={(event) =>
-                  setDescription(event.target.value)
-                }
-                placeholder="Describe the furniture product..."
-                rows={5}
-              />
+        <div className="sm:col-span-2">
+  <Field label="Description">
+    <Textarea
+      value={description}
+      onChange={(event) =>
+        setDescription(event.target.value)
+      }
+      placeholder="Describe the furniture product..."
+      rows={5}
+    />
 
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-[#9A9C96]">
-                <Sparkles className="size-3.5" />
-                AI description generation will be available
-                here later.
-              </div>
-            </Field>
-          </div>
+    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-1.5 text-xs text-[#73766F]">
+        <Sparkles className="size-3.5 text-[#B8895B]" />
+        Generate a professional description using product
+        information.
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        disabled={generatingDescription || saving}
+        onClick={handleGenerateDescription}
+        className="w-full sm:w-auto"
+      >
+        {generatingDescription ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Sparkles className="size-4" />
+        )}
+
+        {generatingDescription
+          ? "Generating..."
+          : description.trim()
+            ? "Regenerate with AI"
+            : "Generate with AI"}
+      </Button>
+    </div>
+
+    {aiError && (
+      <div
+        role="alert"
+        className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+      >
+        {aiError}
+      </div>
+    )}
+  </Field>
+</div>
         </div>
       </FormSection>
 
