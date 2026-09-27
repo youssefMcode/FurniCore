@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.product import CategoryCreate, CategoryUpdate
 
 
@@ -16,6 +16,7 @@ def list_categories(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("categories")
             .select(
@@ -42,6 +43,7 @@ def create_category(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         name = payload.name.strip()
 
         existing_response = (
@@ -109,6 +111,7 @@ def update_category(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         existing = (
             supabase.table("categories")
             .select("id")

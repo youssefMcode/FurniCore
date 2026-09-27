@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BrainCircuit,
   ChartNoAxesCombined,
   CircleDollarSign,
   ClipboardList,
@@ -104,12 +103,6 @@ const navigation: NavSection[] = [
         label: "Reports",
         href: "/reports",
         icon: ChartNoAxesCombined,
-        adminOnly: true,
-      },
-      {
-        label: "AI Insights",
-        href: "/ai-insights",
-        icon: BrainCircuit,
         adminOnly: true,
       },
     ],

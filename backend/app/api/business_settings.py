@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.business_settings import BusinessSettingsUpdate
 from uuid import uuid4
 
@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-def load_settings():
+def load_settings(supabase):
     response = (
         supabase.table("business_settings")
         .select(
@@ -39,7 +39,8 @@ def get_business_settings(
     current_user: dict = Depends(get_current_user),
 ):
     try:
-        return load_settings()
+        supabase = get_supabase_client()
+        return load_settings(supabase)
 
     except HTTPException:
         raise
@@ -59,7 +60,8 @@ def update_business_settings(
     current_user: dict = Depends(require_admin),
 ):
     try:
-        existing = load_settings()
+        supabase = get_supabase_client()
+        existing = load_settings(supabase)
 
         business_name = payload.business_name.strip()
 
@@ -152,6 +154,7 @@ async def upload_business_logo(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         if file.content_type not in ALLOWED_LOGO_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -172,7 +175,7 @@ async def upload_business_logo(
                 detail="Logo must be 5 MB or smaller.",
             )
 
-        settings = load_settings()
+        settings = load_settings(supabase)
 
         extension = ALLOWED_LOGO_TYPES[file.content_type]
         storage_path = f"logos/{uuid4()}.{extension}"

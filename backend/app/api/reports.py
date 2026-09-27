@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client   
 
 router = APIRouter(
     prefix="/api/reports",
@@ -92,6 +92,7 @@ def get_reports(
         # -----------------------------------
         # Date range
         # -----------------------------------
+        supabase = get_supabase_client()
 
         today = date.today()
 

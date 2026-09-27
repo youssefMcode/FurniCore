@@ -10,7 +10,7 @@ from fastapi import (
 )
 
 from app.core.auth import require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 
 
 router = APIRouter(
@@ -26,11 +26,10 @@ ALLOWED_IMAGE_TYPES = {
 }
 
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
-
 MAX_PRODUCT_IMAGES = 6
 
 
-def get_product_or_404(product_id: str):
+def get_product_or_404(supabase, product_id: str):
     response = (
         supabase.table("products")
         .select("id")
@@ -53,7 +52,10 @@ async def upload_product_image(
     file: UploadFile = File(...),
     current_user: dict = Depends(require_admin),
 ):
-    get_product_or_404(product_id)
+    # One fresh client for this request.
+    supabase = get_supabase_client()
+
+    get_product_or_404(supabase, product_id)
 
     existing_response = (
         supabase.table("product_images")
@@ -77,6 +79,12 @@ async def upload_product_image(
         )
 
     contents = await file.read()
+
+    if not contents:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Image file is empty.",
+        )
 
     if len(contents) > MAX_IMAGE_SIZE:
         raise HTTPException(
@@ -134,6 +142,11 @@ async def upload_product_image(
             .execute()
         )
 
+        if not image_response.data:
+            raise Exception(
+                "Product image record could not be created."
+            )
+
         image = image_response.data[0]
 
         supabase.table("audit_logs").insert(
@@ -173,9 +186,12 @@ def set_primary_product_image(
     image_id: str,
     current_user: dict = Depends(require_admin),
 ):
-    get_product_or_404(product_id)
-
     try:
+        # One fresh client for this request.
+        supabase = get_supabase_client()
+
+        get_product_or_404(supabase, product_id)
+
         image_response = (
             supabase.table("product_images")
             .select("id")
@@ -190,7 +206,7 @@ def set_primary_product_image(
                 detail="Product image not found.",
             )
 
-        # Important because DB allows only one primary image.
+        # DB allows only one primary image.
         supabase.table("product_images").update(
             {"is_primary": False}
         ).eq(
@@ -206,6 +222,12 @@ def set_primary_product_image(
             .eq("product_id", product_id)
             .execute()
         )
+
+        if not response.data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to change primary image.",
+            )
 
         supabase.table("audit_logs").insert(
             {
@@ -236,9 +258,12 @@ def delete_product_image(
     image_id: str,
     current_user: dict = Depends(require_admin),
 ):
-    get_product_or_404(product_id)
-
     try:
+        # One fresh client for this request.
+        supabase = get_supabase_client()
+
+        get_product_or_404(supabase, product_id)
+
         response = (
             supabase.table("product_images")
             .select(
@@ -265,7 +290,8 @@ def delete_product_image(
             "id", image_id
         ).execute()
 
-        # If primary was deleted, make the first remaining image primary.
+        # If the primary image was deleted,
+        # make the first remaining image primary.
         if image["is_primary"]:
             remaining_response = (
                 supabase.table("product_images")

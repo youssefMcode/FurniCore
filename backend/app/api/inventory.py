@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.inventory import StockAdjustment
 
 
@@ -16,6 +16,7 @@ def get_inventory(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("products")
             .select(
@@ -47,6 +48,7 @@ def adjust_stock(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("products")
             .select(

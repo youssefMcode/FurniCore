@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.product import ProductCreate, ProductUpdate
 
 
@@ -19,6 +19,7 @@ def list_products(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         query = (
             supabase.table("products")
             .select(
@@ -68,6 +69,7 @@ def get_product(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("products")
            .select(
@@ -109,6 +111,7 @@ def create_product(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         category_response = (
             supabase.table("categories")
             .select("id, is_active")
@@ -128,7 +131,7 @@ def create_product(
         existing_sku = (
             supabase.table("products")
             .select("id")
-            .eq("sku", payload.sku.strip())
+            .eq("sku", payload.sku.strip().upper())
             .execute()
         )
 
@@ -184,6 +187,7 @@ def update_product(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         existing_response = (
             supabase.table("products")
             .select("id")
