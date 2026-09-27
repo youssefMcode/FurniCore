@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.purchase import PurchaseCreate
 
 
@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-def load_purchase(purchase_id: str):
+def load_purchase( supabase,purchase_id: str):
     response = (
         supabase.table("purchases")
         .select(
@@ -45,6 +45,7 @@ def list_purchases(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         query = (
             supabase.table("purchases")
             .select(
@@ -79,6 +80,7 @@ def get_purchase(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         return load_purchase(str(purchase_id))
 
     except HTTPException:
@@ -102,6 +104,7 @@ def create_purchase(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         if not payload.items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,6 +193,7 @@ def cancel_purchase(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         supabase.rpc(
             "cancel_purchase_transaction",
             {

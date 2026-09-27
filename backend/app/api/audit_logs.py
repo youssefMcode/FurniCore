@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 
 from app.core.auth import require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 
 
 router = APIRouter(
@@ -16,6 +16,7 @@ def list_audit_logs(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("audit_logs")
             .select(

@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.user import UserCreate, UserUpdate
 
 
@@ -18,6 +18,7 @@ def list_users(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("users")
             .select("id, name, role, is_active, created_at")
@@ -42,6 +43,7 @@ def get_user(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("users")
             .select("id, name, role, is_active, created_at")
@@ -81,6 +83,7 @@ def create_user(
     auth_user_id = None
 
     try:
+        supabase = get_supabase_client()
         name = payload.name.strip()
         email = str(payload.email).strip().lower()
 
@@ -131,6 +134,7 @@ def create_user(
         user = profile_response.data[0]
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(
@@ -152,6 +156,7 @@ def create_user(
         # Avoid leaving an Auth account without a business profile.
         if auth_user_id:
             try:
+                supabase = get_supabase_client()
                 supabase.auth.admin.delete_user(auth_user_id)
             except Exception:
                 pass
@@ -162,6 +167,7 @@ def create_user(
         # Compensating cleanup if profile creation failed.
         if auth_user_id:
             try:
+                supabase = get_supabase_client()
                 supabase.auth.admin.delete_user(auth_user_id)
             except Exception as cleanup_error:
                 print(
@@ -195,6 +201,7 @@ def update_user(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         user_id_string = str(user_id)
 
         existing_response = (
@@ -265,6 +272,7 @@ def update_user(
             )
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(

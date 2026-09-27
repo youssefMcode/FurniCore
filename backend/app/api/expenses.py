@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import get_current_user, require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
 
 
@@ -22,6 +22,7 @@ def list_expenses(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         if start_date and end_date and start_date > end_date:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -74,6 +75,7 @@ def get_expense(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("expenses")
             .select(
@@ -114,6 +116,7 @@ def create_expense(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         if payload.expense_date > date.today():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -151,6 +154,7 @@ def create_expense(
         expense = response.data[0]
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(
@@ -187,6 +191,7 @@ def update_expense(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         existing = (
             supabase.table("expenses")
             .select("id")
@@ -248,6 +253,7 @@ def update_expense(
             )
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(

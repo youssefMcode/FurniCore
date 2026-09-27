@@ -11,7 +11,7 @@ from app.core.auth import (
     get_current_user,
     require_admin,
 )
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.supplier import (
     SupplierCreate,
     SupplierUpdate,
@@ -29,6 +29,7 @@ def get_suppliers(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("suppliers")
             .select(
@@ -56,6 +57,7 @@ def get_supplier(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("suppliers")
             .select(
@@ -96,6 +98,7 @@ def create_supplier(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         name = payload.name.strip()
 
         if not name:
@@ -139,6 +142,7 @@ def create_supplier(
         supplier = response.data[0]
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(
@@ -177,6 +181,7 @@ def update_supplier(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         existing = (
             supabase.table("suppliers")
             .select("id")
@@ -238,6 +243,7 @@ def update_supplier(
             )
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(

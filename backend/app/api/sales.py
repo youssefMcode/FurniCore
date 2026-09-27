@@ -8,7 +8,7 @@ from fastapi import (
 )
 
 from app.core.auth import get_current_user , require_admin
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.sale import ( SaleCreate, PaymentCreate , ReturnCreate,)
 
 
@@ -52,6 +52,7 @@ def create_sale(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         rpc_payload = {
             "p_customer_id": (
                 str(payload.customer_id)
@@ -140,6 +141,7 @@ def get_sales(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("sales")
             .select(
@@ -181,6 +183,7 @@ def get_sale_details(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("sales")
 .select(
@@ -245,6 +248,7 @@ def add_payment(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         sale_response = (
             supabase.table("sales")
             .select("id, total, status")
@@ -314,6 +318,7 @@ def add_payment(
             )
 
         try:
+            supabase = get_supabase_client()
             (
                 supabase.table("audit_logs")
                 .insert(
@@ -348,6 +353,7 @@ def cancel_sale(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         (
             supabase.rpc(
                 "cancel_sale_transaction",
@@ -407,6 +413,7 @@ def create_return(
     current_user: dict = Depends(require_admin),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.rpc(
                 "create_return_transaction",

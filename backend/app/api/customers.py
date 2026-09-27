@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.auth import get_current_user
-from app.core.supabase import supabase
+from app.core.supabase import get_supabase_client
 from app.schemas.customer import CustomerCreate, CustomerUpdate
 
 
@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 
-def get_customer_or_404(customer_id: str) -> dict:
+def get_customer_or_404(supabase, customer_id: str) -> dict:
     response = (
         supabase.table("customers")
         .select(
@@ -32,11 +32,13 @@ def get_customer_or_404(customer_id: str) -> dict:
 
 
 def write_audit_log(
+    supabase,    
     user_id: str,
     action: str,
     customer_id: str,
 ) -> None:
     try:
+        supabase = get_supabase_client()
         (
             supabase.table("audit_logs")
             .insert(
@@ -60,6 +62,7 @@ def get_customers(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         response = (
             supabase.table("customers")
             .select(
@@ -86,6 +89,7 @@ def get_customer(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         return get_customer_or_404(customer_id)
 
     except HTTPException:
@@ -106,6 +110,7 @@ def create_customer(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         customer_data = payload.model_dump()
 
         response = (
@@ -149,6 +154,7 @@ def update_customer(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         get_customer_or_404(customer_id)
 
         changes = payload.model_dump(exclude_unset=True)
@@ -197,6 +203,7 @@ def get_customer_sales(
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        supabase = get_supabase_client()
         get_customer_or_404(customer_id)
 
         response = (
