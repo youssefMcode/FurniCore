@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-def load_purchase( supabase,purchase_id: str):
+def load_purchase(supabase, purchase_id: str):
     response = (
         supabase.table("purchases")
         .select(
@@ -46,6 +46,7 @@ def list_purchases(
 ):
     try:
         supabase = get_supabase_client()
+
         query = (
             supabase.table("purchases")
             .select(
@@ -65,6 +66,9 @@ def list_purchases(
 
         return response.data or []
 
+    except HTTPException:
+        raise
+
     except Exception as exc:
         print(f"Purchases list error: {exc}")
 
@@ -81,7 +85,11 @@ def get_purchase(
 ):
     try:
         supabase = get_supabase_client()
-        return load_purchase(str(purchase_id))
+
+        return load_purchase(
+            supabase,
+            str(purchase_id),
+        )
 
     except HTTPException:
         raise
@@ -105,6 +113,7 @@ def create_purchase(
 ):
     try:
         supabase = get_supabase_client()
+
         if not payload.items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -152,7 +161,10 @@ def create_purchase(
                 detail="Purchase could not be created.",
             )
 
-        return load_purchase(str(purchase_id))
+        return load_purchase(
+            supabase,
+            str(purchase_id),
+        )
 
     except HTTPException:
         raise
@@ -194,6 +206,7 @@ def cancel_purchase(
 ):
     try:
         supabase = get_supabase_client()
+
         supabase.rpc(
             "cancel_purchase_transaction",
             {
@@ -202,7 +215,10 @@ def cancel_purchase(
             },
         ).execute()
 
-        return load_purchase(str(purchase_id))
+        return load_purchase(
+            supabase,
+            str(purchase_id),
+        )
 
     except HTTPException:
         raise
